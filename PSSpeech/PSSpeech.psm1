@@ -8,19 +8,25 @@ function Get-SpeechToken {
         Azure Cognitive Services. This requires access to an Azure subscription and API key for the speech service. 
     .EXAMPLE
         PS C:\> Get-SpeechToken -Key <yourkey> 
+
         This example gets a token using the provided key. The default value for the Region parameter is set to westeurope, please specify the region where your Cognitive Services is deployed.
     .INPUTS
         None.
     .OUTPUTS
-        [psobject]   
+        [psobject]
+    .NOTES
+        Key should probably be a secure string, update once secrets management module is released.   
     #>
     [CmdletBinding(HelpUri = 'https://ntsystems.it/PowerShell/Get-SpeechToken/')]
     param (
         [Parameter()]
-        [ValidateSet("westeurope","northeurope")]
+        [ValidateSet("westeurope","northeurope","westus2","westus","uksouth","francecentral")]
+        [string]
         $Region = "westeurope",
+
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
+        [string]
         $Key 
     )
     $FetchTokenHeader = @{
@@ -42,7 +48,13 @@ function Save-SpeechToken {
         This function takes a token as retreived from Get-SpeechToken and creates a variable in the global scope and saves the token.
     .EXAMPLE
         PS C:\> Get-SpeechToken -Key <yourkey> | Save-SpeechToken
-        Explanation of what the example does
+
+        This example first gets a token then saves it to a global variable in the current PowerShell session.
+    .EXAMPLE
+        PS C:\> Get-SpeechToken -Key <yourkey> -OutVariable token
+        PS C:\> Save-SpeechToken -Token $token
+
+        This example first gets a token then saves it to a global variable in the current PowerShell session.
     .INPUTS
         [psobject]
     .OUTPUTS
@@ -66,6 +78,7 @@ function Get-SpeechVoicesList {
         If the Token parameter is not specified, the global variable created by Save-SpeechToken is used.
     .EXAMPLE
         PS C:\> Get-SpeechVoicesList
+
         This example gets a list of available voices.
     .INPUTS
         None.
@@ -76,8 +89,11 @@ function Get-SpeechVoicesList {
     #>
     [CmdletBinding(HelpUri = 'https://ntsystems.it/PowerShell/Get-SpeechVoicesList/')]
     param (
-        [ValidateSet("westeurope","northeurope")]
+        [ValidateSet("westeurope","northeurope","westus2","westus","uksouth","francecentral")]
+        [string]
         $Region = "westeurope",
+
+        [ValidateNotNullOrEmpty()]
         $Token = $Global:PSSpeechToken
     )
     $AuthHeader = @{
@@ -96,33 +112,42 @@ function Convert-TextToSpeech {
         This function uses Invoke-RestMethod to call the Azure Cognitive Service Speech Service API, convert a string to speech, and save the resulting audio to a file.
     .EXAMPLE
         PS C:\> Convert-TextToSpeech -Text "Hi, this is a test." -Path test.mp3
+
         This example converts the string "Hi, this is a test." to speech and saves the audio to the test.mp3 file.
     .INPUTS
         None.
     .OUTPUTS
         None.
     .NOTES
-        General notes
+        I've added only the neural voices to the ValidateSet attribute, more voices are available.
     #>
     [CmdletBinding(HelpUri = 'https://ntsystems.it/PowerShell/Convert-TextToSpeech/')]
     param (
         [Parameter()]
-        [ValidateSet("westeurope","northeurope")]
+        [ValidateSet("westeurope","northeurope","westus2","westus","uksouth","francecentral")]
+        [string]
         $Region = "westeurope",
+
         [Parameter()]
         $Token = $Global:PSSpeechToken,
+
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
         [String]
         $Text,
+
         [Parameter(Mandatory)]
         [System.IO.FileInfo]
         $Path,
+
         [Parameter()]
         [ValidateSet('en-US-GuyNeural','en-US-JessaNeural','zh-CN-XiaoxiaoNeural','it-IT-ElsaNeural','de-DE-KatjaNeural','en-GB-HarryNeural','fr-FR-HortenseNeural','pt-BR-FranciscaNeural')]
+        [string]
         $Voice = 'en-GB-HarryNeural',
+        
         [Parameter()]
         [ValidateSet("raw-16khz-16bit-mono-pcm","audio-16khz-128kbitrate-mono-mp3","audio-16khz-32kbitrate-mono-mp3","audio-24khz-96kbitrate-mono-mp3","audio-24khz-48kbitrate-mono-mp3","audio-24khz-160kbitrate-mono-mp3","audio-16khz-64kbitrate-mono-mp3")]
+        [string]
         $OutputFormat = "audio-16khz-32kbitrate-mono-mp3"
     )
     $AuthHeader = @{
