@@ -1,3 +1,23 @@
+function GetRegions {
+    <#
+    .SYNOPSIS
+        Validate Regions
+    .DESCRIPTION
+        This is a private function to validate the region supplied to the public functions.
+    .EXAMPLE
+        None.
+    .INPUTS
+        [string]
+    .OUTPUTS
+        [bool]
+    #>
+    [CmdletBinding()]
+    param($Region)
+    
+    $Regions = @("centralus","eastus","eastus2","northcentralus","southcentralus","westcentralus","westus","westus2","canadacentral","brazilsouth","eastasia","southeastasia","australiaeast","centralindia","japaneast","japanwest","koreacentral","northeurope","westeurope","francecentral","uksouth")
+    
+    return $Regions.contains($Region.ToLower())
+}
 
 function Get-SpeechToken {
     <#
@@ -20,7 +40,7 @@ function Get-SpeechToken {
     [CmdletBinding(HelpUri = 'https://ntsystems.it/PowerShell/Get-SpeechToken/')]
     param (
         [Parameter()]
-        [ValidateSet("westeurope","northeurope","westus2","westus","uksouth","francecentral")]
+        [ValidateScript( { GetRegions($_) } )]
         [string]
         $Region = "westeurope",
 
@@ -89,7 +109,7 @@ function Get-SpeechVoicesList {
     #>
     [CmdletBinding(HelpUri = 'https://ntsystems.it/PowerShell/Get-SpeechVoicesList/')]
     param (
-        [ValidateSet("westeurope","northeurope","westus2","westus","uksouth","francecentral")]
+        [ValidateScript( { GetRegions($_) } )]
         [string]
         $Region = "westeurope",
 
@@ -124,7 +144,7 @@ function Convert-TextToSpeech {
     [CmdletBinding(HelpUri = 'https://ntsystems.it/PowerShell/Convert-TextToSpeech/')]
     param (
         [Parameter()]
-        [ValidateSet("westeurope","northeurope","westus2","westus","uksouth","francecentral")]
+        [ValidateScript( { GetRegions($_) } )]
         [string]
         $Region = "westeurope",
 
