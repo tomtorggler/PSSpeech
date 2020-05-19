@@ -14,8 +14,7 @@ function GetRegions {
     [CmdletBinding()]
     param($Region)
     
-    $Regions = @("centralus","eastus","eastus2","northcentralus","southcentralus","westcentralus","westus","westus2","canadacentral","brazilsouth","eastasia","southeastasia","australiaeast","centralindia","japaneast","japanwest","koreacentral","northeurope","westeurope","francecentral","uksouth")
-    
+    $Regions = @("centralus", "eastus", "eastus2", "northcentralus", "southcentralus", "westcentralus", "westus", "westus2", "canadacentral", "brazilsouth", "eastasia", "southeastasia", "australiaeast", "centralindia", "japaneast", "japanwest", "koreacentral", "northeurope", "westeurope", "francecentral", "uksouth")
     return $Regions.contains($Region.ToLower())
 }
 
