@@ -112,13 +112,14 @@ function Convert-TextToSpeech {
         [Parameter()]
         [ValidateScript({Get-SpeechVoicesList | select-object ShortName})]
         [string]
-        $Voice = 'en-GB-HarryNeural',
+        $Voice = 'en-GB-LibbyNeural',
         
         [Parameter()]
         [ValidateSet("raw-16khz-16bit-mono-pcm","audio-16khz-128kbitrate-mono-mp3","audio-16khz-32kbitrate-mono-mp3","audio-24khz-96kbitrate-mono-mp3","audio-24khz-48kbitrate-mono-mp3","audio-24khz-160kbitrate-mono-mp3","audio-16khz-64kbitrate-mono-mp3")]
         [string]
         $OutputFormat = "audio-16khz-32kbitrate-mono-mp3"
     )
+    $SpokenVoice = Get-SpeechVoicesList | ? {$_.ShortName -eq $Voice}
     $token =$script:SpeechToken.Token
     $AuthHeader = @{
         'Content-type' = 'application/ssml+xml'
@@ -128,8 +129,14 @@ function Convert-TextToSpeech {
     }
     $region = $script:SpeechToken.region
     # build the ssml xml 
+    #<voice xml:lang='en-US' xml:gender='Female'     name='en-US-AriaRUS'>
+    #will assume language and voice are the same
     [xml]$xml = "<speak version='1.0' xml:lang='en-GB'><voice xml:lang='en-GB' xml:gender='Female' name='$Voice'></voice></speak>"
     $xml.speak.voice.InnerText=$text
+    $xml.speak.lang = $spokenvoice.Locale
+    $xml.speak.voice.lang = $spokenvoice.Locale
+    $xml.speak.voice.gender = $spokenvoice.Gender
+    $xml.speak.voice.name = $spokenvoice.ShortName
     # send to speech service and save output in file 
     Invoke-RestMethod -Uri "https://$region.tts.speech.microsoft.com/cognitiveservices/v1" -Headers $AuthHeader -Method Post -Body $xml -OutFile $Path -Verbose
 }
