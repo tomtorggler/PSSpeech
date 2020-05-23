@@ -1,23 +1,3 @@
-function GetRegions {
-    <#
-    .SYNOPSIS
-        Validate Regions
-    .DESCRIPTION
-        This is a private function to validate the region supplied to the public functions.
-    .EXAMPLE
-        None.
-    .INPUTS
-        [string]
-    .OUTPUTS
-        [bool]
-    #>
-    [CmdletBinding()]
-    param($Region)
-    
-    $Regions = @("centralus", "eastus", "eastus2", "northcentralus", "southcentralus", "westcentralus", "westus", "westus2", "canadacentral", "brazilsouth", "eastasia", "southeastasia", "australiaeast", "centralindia", "japaneast", "japanwest", "koreacentral", "northeurope", "westeurope", "francecentral", "uksouth")
-    return $Regions.contains($Region.ToLower())
-}
-
 function Get-SpeechToken {
     <#
     .SYNOPSIS
@@ -38,12 +18,12 @@ function Get-SpeechToken {
     #>
     [CmdletBinding(HelpUri = 'https://ntsystems.it/PowerShell/Get-SpeechToken/')]
     param (
-        [Parameter()]
-        [ValidateScript( { GetRegions($_) } )]
+        [Parameter(mandatory=$true)]
+        [ValidateSet("centralus", "eastus", "eastus2", "northcentralus", "southcentralus", "westcentralus", "westus", "westus2", "canadacentral", "brazilsouth", "eastasia", "southeastasia", "australiaeast", "centralindia", "japaneast", "japanwest", "koreacentral", "northeurope", "westeurope", "francecentral", "uksouth")]
         [string]
-        $Region = "westeurope",
+        $Region,
 
-        [Parameter(Mandatory)]
+        [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [string]
         $Key 
@@ -53,38 +33,17 @@ function Get-SpeechToken {
         'Content-Length'= '0';
         'Ocp-Apim-Subscription-Key' = $Key
     } 
-    New-Object -TypeName psobject -Property (@{
-        TimeStamp = Get-DAte
+    $script:SpeechToken = New-Object -TypeName psobject -Property (@{
+        TimeStamp = Get-Date
         Token = Invoke-RestMethod -Method POST -Uri "https://$region.api.cognitive.microsoft.com/sts/v1.0/issueToken" -Headers $FetchTokenHeader
+        Region = $Region
     })
+    
 }
 
-function Save-SpeechToken {
-    <#
-    .SYNOPSIS
-        Save a token for the current session.
-    .DESCRIPTION
-        This function takes a token as retreived from Get-SpeechToken and creates a variable in the global scope and saves the token.
-    .EXAMPLE
-        PS C:\> Get-SpeechToken -Key <yourkey> | Save-SpeechToken
-
-        This example first gets a token then saves it to a global variable in the current PowerShell session.
-    .EXAMPLE
-        PS C:\> Get-SpeechToken -Key <yourkey> -OutVariable token
-        PS C:\> Save-SpeechToken -Token $token
-
-        This example first gets a token then saves it to a global variable in the current PowerShell session.
-    .INPUTS
-        [psobject]
-    .OUTPUTS
-        None.
-    #>
-    [CmdletBinding(HelpUri = 'https://ntsystems.it/PowerShell/Save-SpeechToken/')]
-    param (
-        [Parameter(ValueFromPipeline)]
-        $Token    
-    )
-    Set-Variable -Scope global -Name PSSpeechToken -Value $token
+function Get-SpeechTokenResult
+{
+    return $script:SpeechToken
 }
 
 function Get-SpeechVoicesList {
@@ -108,19 +67,16 @@ function Get-SpeechVoicesList {
     #>
     [CmdletBinding(HelpUri = 'https://ntsystems.it/PowerShell/Get-SpeechVoicesList/')]
     param (
-        [ValidateScript( { GetRegions($_) } )]
-        [string]
-        $Region = "westeurope",
-
-        [ValidateNotNullOrEmpty()]
-        $Token = $Global:PSSpeechToken
     )
+    $token = $script:SpeechToken.Token
     $AuthHeader = @{
         'Content-type' = 'application/ssml+xml';
-        'Authorization' = "Bearer $($Token.Token)";
+        'Authorization' = "Bearer $Token";
         'Content-Length'= '0';
     }   
-    Invoke-RestMethod -uri "https://$region.tts.speech.microsoft.com/cognitiveservices/voices/list" -Headers $AuthHeader -Method Get
+    $region = $script:SpeechToken.region
+    $voices = Invoke-RestMethod -uri "https://$region.tts.speech.microsoft.com/cognitiveservices/voices/list" -Headers $AuthHeader -Method Get
+    $voices
 }
 
 function Convert-TextToSpeech {
@@ -142,14 +98,8 @@ function Convert-TextToSpeech {
     #>
     [CmdletBinding(HelpUri = 'https://ntsystems.it/PowerShell/Convert-TextToSpeech/')]
     param (
-        [Parameter()]
-        [ValidateScript( { GetRegions($_) } )]
-        [string]
-        $Region = "westeurope",
-
-        [Parameter()]
-        $Token = $Global:PSSpeechToken,
-
+        
+        
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
         [String]
@@ -160,7 +110,7 @@ function Convert-TextToSpeech {
         $Path,
 
         [Parameter()]
-        [ValidateSet('en-US-GuyNeural','en-US-JessaNeural','zh-CN-XiaoxiaoNeural','it-IT-ElsaNeural','de-DE-KatjaNeural','en-GB-HarryNeural','fr-FR-HortenseNeural','pt-BR-FranciscaNeural')]
+        [ValidateScript({Get-SpeechVoicesList | select-object ShortName})]
         [string]
         $Voice = 'en-GB-HarryNeural',
         
@@ -169,15 +119,17 @@ function Convert-TextToSpeech {
         [string]
         $OutputFormat = "audio-16khz-32kbitrate-mono-mp3"
     )
+    $token =$script:SpeechToken.Token
     $AuthHeader = @{
         'Content-type' = 'application/ssml+xml'
-        'Authorization' = "Bearer $($Token.Token)"
+        'Authorization' = "Bearer $token"
         'X-Microsoft-OutputFormat' = $OutputFormat
         'User-Agent' = "powershell"
     }
+    $region = $script:SpeechToken.region
     # build the ssml xml 
     [xml]$xml = "<speak version='1.0' xml:lang='en-GB'><voice xml:lang='en-GB' xml:gender='Female' name='$Voice'>$Text</voice></speak>"
     # send to speech service and save output in file 
-    Invoke-RestMethod -Uri "https://$region.tts.speech.microsoft.com/cognitiveservices/v1" -Headers $AuthHeader -Method Post -Body $xml -OutFile $Path
+    Invoke-RestMethod -Uri "https://$region.tts.speech.microsoft.com/cognitiveservices/v1" -Headers $AuthHeader -Method Post -Body $xml -OutFile $Path -Verbose
 }
 
