@@ -128,7 +128,8 @@ function Convert-TextToSpeech {
     }
     $region = $script:SpeechToken.region
     # build the ssml xml 
-    [xml]$xml = "<speak version='1.0' xml:lang='en-GB'><voice xml:lang='en-GB' xml:gender='Female' name='$Voice'>$Text</voice></speak>"
+    [xml]$xml = "<speak version='1.0' xml:lang='en-GB'><voice xml:lang='en-GB' xml:gender='Female' name='$Voice'></voice></speak>"
+    $xml.speak.voice.InnerText=$text
     # send to speech service and save output in file 
     Invoke-RestMethod -Uri "https://$region.tts.speech.microsoft.com/cognitiveservices/v1" -Headers $AuthHeader -Method Post -Body $xml -OutFile $Path -Verbose
 }
