@@ -4,17 +4,18 @@ function Get-SpeechToken {
         Get OAuth token for authorization to Azure Cognitive Services.
     .DESCRIPTION
         This function uses Invoke-RestMethod to get a bearer token that can be used in the Authorization header when calling 
-        Azure Cognitive Services. This requires access to an Azure subscription and API key for the speech service. 
+        Azure Cognitive Services. This requires access to an Azure subscription and API key for the speech service.
     .EXAMPLE
-        PS C:\> Get-SpeechToken -Key <yourkey> 
+        PS C:\> Get-SpeechToken -Region <region> -Key <apikey> 
 
-        This example gets a token using the provided key. The default value for the Region parameter is set to westeurope, please specify the region where your Cognitive Services is deployed.
+        This example gets a token using the provided key and region.
     .INPUTS
         None.
     .OUTPUTS
         [psobject]
     .NOTES
-        Key should probably be a secure string, update once secrets management module is released.   
+        Key should probably be a secure string, update once secrets management module is released.
+        The token is stored in $script:SpeechToken and can be retrieved with Get-SpeechTokenResult
     #>
     [CmdletBinding(HelpUri = 'https://ntsystems.it/PowerShell/Get-SpeechToken/')]
     param (
@@ -41,11 +42,9 @@ function Get-SpeechToken {
     
 }
 
-function Get-SpeechTokenResult
-{
+function Get-SpeechTokenResult {
     return $script:SpeechToken
 }
-
 function Get-SpeechVoicesList {
     <#
     .SYNOPSIS
@@ -67,8 +66,8 @@ function Get-SpeechVoicesList {
     #>
     [CmdletBinding(HelpUri = 'https://ntsystems.it/PowerShell/Get-SpeechVoicesList/')]
     param (
+        $token = $script:SpeechToken.Token
     )
-    $token = $script:SpeechToken.Token
     $AuthHeader = @{
         'Content-type' = 'application/ssml+xml';
         'Authorization' = "Bearer $Token";
@@ -93,13 +92,9 @@ function Convert-TextToSpeech {
         None.
     .OUTPUTS
         None.
-    .NOTES
-        I've added only the neural voices to the ValidateSet attribute, more voices are available.
     #>
     [CmdletBinding(HelpUri = 'https://ntsystems.it/PowerShell/Convert-TextToSpeech/')]
     param (
-        
-        
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
         [String]
@@ -110,7 +105,7 @@ function Convert-TextToSpeech {
         $Path,
 
         [Parameter()]
-        [ValidateScript({Get-SpeechVoicesList | select-object ShortName})]
+        [ValidateScript({Get-SpeechVoicesList | Select-Object ShortName})]
         [string]
         $Voice = 'en-GB-LibbyNeural',
         
@@ -120,7 +115,7 @@ function Convert-TextToSpeech {
         $OutputFormat = "audio-16khz-32kbitrate-mono-mp3"
     )
     $SpokenVoice = Get-SpeechVoicesList | ? {$_.ShortName -eq $Voice}
-    $token =$script:SpeechToken.Token
+    $token = $script:SpeechToken.Token
     $AuthHeader = @{
         'Content-type' = 'application/ssml+xml'
         'Authorization' = "Bearer $token"
@@ -140,4 +135,3 @@ function Convert-TextToSpeech {
     # send to speech service and save output in file 
     Invoke-RestMethod -Uri "https://$region.tts.speech.microsoft.com/cognitiveservices/v1" -Headers $AuthHeader -Method Post -Body $xml -OutFile $Path -Verbose
 }
-
